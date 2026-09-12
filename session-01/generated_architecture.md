@@ -8,26 +8,26 @@ flowchart TD
     setup --> config["Shared helper loads dotenv configuration<br/>Existing environment takes precedence<br/>Then discovered .env, then course-demos/.env"]
     config --> main["main() chat loop<br/>Print greeting once"]
     main --> input["User input<br/>input() reads a natural-language message"]
-    input -- "EOFError or KeyboardInterrupt" --> goodbye["Print goodbye and end loop"]
-    input -- "Message received" --> exitclean["clean_message_text(message).lower()<br/>Trim and collapse whitespace; lowercase for exit check"]
+    input --> |"EOFError or KeyboardInterrupt"| goodbye["Print goodbye and end loop"]
+    input --> |"Message received"| exitclean["clean_message_text(message).lower()<br/>Trim and collapse whitespace; lowercase for exit check"]
     exitclean --> exitcheck{"exit, quit, or 退出?"}
-    exitcheck -- "Yes" --> goodbye
-    exitcheck -- "No" --> get["get_poetry_reply(message)<br/>Receives the original message"]
+    exitcheck --> |"Yes"| goodbye
+    exitcheck --> |"No"| get["get_poetry_reply(message)<br/>Receives the original message"]
     get --> clean["clean_message_text()<br/>Trim and collapse whitespace"]
     clean --> empty{"Cleaned message empty?"}
-    empty -- "Yes" --> reminder["Return request to enter a message<br/>No LLM call"]
-    empty -- "No" --> prompt["Prompt construction<br/>Instruction plus cleaned message<br/>SYSTEM_PROMPT asks for meaning or emotion interpretation,<br/>one authentic classical Chinese poem line,<br/>and an optional short explanation"]
+    empty --> |"Yes"| reminder["Return request to enter a message<br/>No LLM call"]
+    empty --> |"No"| prompt["Prompt construction<br/>Instruction plus cleaned message<br/>SYSTEM_PROMPT asks for meaning or emotion interpretation,<br/>one authentic classical Chinese poem line,<br/>and an optional short explanation"]
     prompt --> safe
 
-    subgraph shared["course-demos/common/llm.py"]
+    subgraph shared ["course-demos/common/llm.py"]
         safe["call_llm_safe()<br/>Receives system prompt, user prompt, and MOCK_REPLY"]
-        safe --> call["call_llm()"]
-        call --> provider{"llm_provider()<br/>First configured API key wins"}
-        provider -- "OpenAI, then Anthropic, then DeepSeek" --> real["Real LLM API call<br/>Shared model, timeout, and retry settings"]
-        provider -- "No API key" --> offline["Log mock diagnostic<br/>Return supplied MOCK_REPLY"]
-        call -- "Any exception caught by call_llm_safe" --> failure["Log failure diagnostic<br/>Return supplied MOCK_REPLY"]
-        real -- "Exception" --> failure
-        real -- "Success" --> result["Return model response text"]
+        safe --> llm_call["call_llm()"]
+        llm_call --> provider{"llm_provider: first configured API key wins"}
+        provider --> |"OpenAI, then Anthropic, then DeepSeek"| real["Real LLM API call<br/>Shared model, timeout, and retry settings"]
+        provider --> |"No API key"| offline["Log mock diagnostic<br/>Return supplied MOCK_REPLY"]
+        llm_call --> |"Any exception caught by call_llm_safe"| failure["Log failure diagnostic<br/>Return supplied MOCK_REPLY"]
+        real --> |"Exception"| failure
+        real --> |"Success"| result["Return model response text"]
     end
 
     offline --> mock["Mock fallback reply: fixed example for every message<br/>长风破浪会有时，直挂云帆济沧海。<br/>离线示例：愿这句诗给你继续前行的勇气。"]
